@@ -1,0 +1,7 @@
+{
+  "What is my average daily electricity consumption?": "general",
+  "Why would my bill be high during summer months?": "explanation",
+  "How does load shedding affect my energy usage?": "context",
+  "Were any anomalies detected in the energy data?": "anomaly",
+  "What time of day should I avoid using heavy appliances?": "general"
+}

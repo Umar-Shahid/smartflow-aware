@@ -1,0 +1,5 @@
+Model,ROC_AUC,Avg_Precision
+Isolation Forest,0.7818,0.1943
+LSTM Autoencoder,0.6582,0.0358
+Hybrid AE+IF,0.7977,0.1456
+One-Class SVM,0.6747,0.1159

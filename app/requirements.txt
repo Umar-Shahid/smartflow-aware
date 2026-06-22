@@ -1,0 +1,10 @@
+streamlit
+pandas
+numpy
+matplotlib
+scikit-learn
+lightgbm
+groq
+joblib
+shap
+faiss-cpu

@@ -1,0 +1,29 @@
+# Virtual environment
+venv/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Large model files
+modules/forecasting/gru_model.keras
+modules/forecasting/bilstm_model.keras
+modules/forecasting/tft_model.keras
+
+# Raw data (too large for GitHub)
+data/raw/
+
+# Environment variables
+.env
+*.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Key
+key.txt
