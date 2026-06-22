@@ -36,6 +36,25 @@ st.markdown("""
     .main { background-color: #0f1117; }
     section[data-testid="stSidebar"] { background-color: #12172a; }
 
+    /* Sidebar metric values */
+    section[data-testid="stSidebar"] [data-testid="stMetricValue"] {
+        color: #00d4ff !important;
+        font-size: 1.3rem !important;
+        font-weight: 700 !important;
+    }
+
+    /* Sidebar metric labels */
+    section[data-testid="stSidebar"] [data-testid="stMetricLabel"] {
+        color: #e0e0e0 !important;
+        font-size: 0.78rem !important;
+        font-weight: 500 !important;
+    }
+
+    /* Sidebar metric delta */
+    section[data-testid="stSidebar"] [data-testid="stMetricDelta"] {
+        color: #10b981 !important;
+    }
+
     /* Tabs */
     .stTabs [data-baseweb="tab-list"] {
         gap: 6px;
@@ -87,20 +106,25 @@ st.markdown("""
 
     /* Chat bubbles */
     .chat-user {
-        background-color: #1a1d2e;
-        border-left: 3px solid #00d4ff;
-        padding: 10px 14px;
-        border-radius: 6px;
-        margin: 6px 0;
-        color: #f1f5f9;
+        background-color: #1e2235;
+        border-left: 4px solid #00d4ff;
+        padding: 12px 16px;
+        border-radius: 0 10px 10px 0;
+        margin: 10px 0;
+        font-size: 0.92rem;
+        color: #ffffff;
+        font-weight: 500;
     }
-    .chat-assistant {
-        background-color: #12172a;
-        border-left: 3px solid #10b981;
-        padding: 10px 14px;
-        border-radius: 6px;
-        margin: 6px 0;
-        color: #e2e8f0;
+    .chat-bot {
+        background-color: #162a20;
+        border-left: 4px solid #10b981;
+        padding: 12px 16px;
+        border-radius: 0 10px 10px 0;
+        margin: 10px 0;
+        font-size: 0.92rem;
+        color: #e8f5e9;
+        font-weight: 400;
+        line-height: 1.6;
     }
 
     /* Section headings */
@@ -472,168 +496,168 @@ with tab3:
             "⚠️ Enter your Groq API key in the sidebar to activate the assistant. "
             "Get a free key at **console.groq.com**."
         )
-        st.stop()
+    else:
 
-    # ── Helper functions ──────────────────────────────────────────────────
-    def classify_intent(question: str) -> str:
-        q = question.lower()
-        scores = {
-            "forecast":    sum(k in q for k in
-                ["forecast", "predict", "tomorrow", "next",
-                 "will be", "expect", "future", "upcoming"]),
-            "anomaly":     sum(k in q for k in
-                ["anomaly", "unusual", "spike", "fault",
-                 "problem", "abnormal", "detected", "strange"]),
-            "explanation": sum(k in q for k in
-                ["why", "reason", "cause", "explain",
-                 "because", "high", "low", "bill"]),
-            "context":     sum(k in q for k in
-                ["load shedding", "tariff", "temperature",
-                 "ramadan", "peak", "wapda", "lesco", "heat", "weather"]),
-            "general":     sum(k in q for k in
-                ["average", "total", "how much", "consumption",
-                 "usage", "summary", "overview", "statistics"]),
-        }
-        best = max(scores, key=scores.get)
-        return best if scores[best] > 0 else "general"
+        # ── Helper functions ──────────────────────────────────────────────────
+        def classify_intent(question: str) -> str:
+            q = question.lower()
+            scores = {
+                "forecast":    sum(k in q for k in
+                    ["forecast", "predict", "tomorrow", "next",
+                    "will be", "expect", "future", "upcoming"]),
+                "anomaly":     sum(k in q for k in
+                    ["anomaly", "unusual", "spike", "fault",
+                    "problem", "abnormal", "detected", "strange"]),
+                "explanation": sum(k in q for k in
+                    ["why", "reason", "cause", "explain",
+                    "because", "high", "low", "bill"]),
+                "context":     sum(k in q for k in
+                    ["load shedding", "tariff", "temperature",
+                    "ramadan", "peak", "wapda", "lesco", "heat", "weather"]),
+                "general":     sum(k in q for k in
+                    ["average", "total", "how much", "consumption",
+                    "usage", "summary", "overview", "statistics"]),
+            }
+            best = max(scores, key=scores.get)
+            return best if scores[best] > 0 else "general"
 
-    def retrieve_context(question: str, k: int = 3) -> str:
-        query_vec = vectorizer.transform([question])
-        scores    = cosine_similarity(query_vec, tfidf_matrix).flatten()
-        top_idx   = scores.argsort()[-k:][::-1]
-        return "\n".join(
-            f"[Day {i+1}] {summaries[idx]}"
-            for i, idx in enumerate(top_idx)
+        def retrieve_context(question: str, k: int = 3) -> str:
+            query_vec = vectorizer.transform([question])
+            scores    = cosine_similarity(query_vec, tfidf_matrix).flatten()
+            top_idx   = scores.argsort()[-k:][::-1]
+            return "\n".join(
+                f"[Day {i+1}] {summaries[idx]}"
+                for i, idx in enumerate(top_idx)
+            )
+
+        def build_data_context(intent: str) -> str:
+            if intent == "general":
+                return (
+                    f"Average power: {df[TARGET].mean():.2f} kW. "
+                    f"Max: {df[TARGET].max():.2f} kW. "
+                    f"Coverage: {df.index.min().date()} to {df.index.max().date()}."
+                )
+            if intent == "forecast":
+                r = pred_df.tail(24)
+                return (
+                    f"LightGBM 24h forecast: avg {r['lgb'].mean():.2f} kW, "
+                    f"peak {r['lgb'].max():.2f} kW at {r['lgb'].idxmax().hour}:00."
+                )
+            if intent == "anomaly":
+                return (
+                    f"Hybrid AE+IF ROC-AUC: "
+                    f"{anomaly_results.loc['Hybrid AE+IF','ROC_AUC']:.3f}. "
+                    f"Anomaly types detected: spikes, dropouts, drift."
+                )
+            if intent == "context":
+                return (
+                    f"Peak tariff active {df['is_peak_tariff'].mean()*100:.1f}% of hours. "
+                    f"Load shedding {df['is_load_shedding'].mean()*100:.1f}% of hours. "
+                    f"Heat season {df['is_heat_season'].mean()*100:.1f}% of year. "
+                    f"Extreme heat {df['is_extreme_heat'].mean()*100:.1f}% of hours."
+                )
+            return (
+                "Top SHAP features: Sub_metering_3, lag_1h, "
+                "Sub_metering_2, Sub_metering_1, Voltage."
+            )
+
+        SYSTEM_PROMPT = (
+            "You are SmartFlow Assistant, an AI energy advisor for Pakistani "
+            "households using SkyElectric's SmartFlow system. You explain "
+            "electricity consumption, anomalies, forecasts, and bills in simple "
+            "language. You know Pakistan's WAPDA/NEPRA tariff schedules (peak "
+            "07:00–23:00), LESCO load shedding rotation, Punjab heat seasons "
+            "(May–August, 40°C+), and Ramadan consumption shifts. Be concise, "
+            "specific, and data-driven. Answers should be 3–5 sentences unless "
+            "the user asks for detail."
         )
 
-    def build_data_context(intent: str) -> str:
-        if intent == "general":
-            return (
-                f"Average power: {df[TARGET].mean():.2f} kW. "
-                f"Max: {df[TARGET].max():.2f} kW. "
-                f"Coverage: {df.index.min().date()} to {df.index.max().date()}."
+        def ask_assistant(question: str) -> str:
+            intent   = classify_intent(question)
+            context  = retrieve_context(question)
+            data_ctx = build_data_context(intent)
+
+            history = [
+                {"role": m["role"], "content": m["content"]}
+                for m in st.session_state.messages[-6:]
+            ]
+
+            client   = Groq(api_key=groq_key)
+            response = client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    *history,
+                    {
+                        "role": "user",
+                        "content": (
+                            f"{question}\n\n"
+                            f"Relevant energy records:\n{context}\n\n"
+                            f"Key stats: {data_ctx}"
+                        ),
+                    },
+                ],
+                temperature=0.3,
+                max_tokens=350,
             )
-        if intent == "forecast":
-            r = pred_df.tail(24)
-            return (
-                f"LightGBM 24h forecast: avg {r['lgb'].mean():.2f} kW, "
-                f"peak {r['lgb'].max():.2f} kW at {r['lgb'].idxmax().hour}:00."
-            )
-        if intent == "anomaly":
-            return (
-                f"Hybrid AE+IF ROC-AUC: "
-                f"{anomaly_results.loc['Hybrid AE+IF','ROC_AUC']:.3f}. "
-                f"Anomaly types detected: spikes, dropouts, drift."
-            )
-        if intent == "context":
-            return (
-                f"Peak tariff active {df['is_peak_tariff'].mean()*100:.1f}% of hours. "
-                f"Load shedding {df['is_load_shedding'].mean()*100:.1f}% of hours. "
-                f"Heat season {df['is_heat_season'].mean()*100:.1f}% of year. "
-                f"Extreme heat {df['is_extreme_heat'].mean()*100:.1f}% of hours."
-            )
-        return (
-            "Top SHAP features: Sub_metering_3, lag_1h, "
-            "Sub_metering_2, Sub_metering_1, Voltage."
-        )
+            return response.choices[0].message.content
 
-    SYSTEM_PROMPT = (
-        "You are SmartFlow Assistant, an AI energy advisor for Pakistani "
-        "households using SkyElectric's SmartFlow system. You explain "
-        "electricity consumption, anomalies, forecasts, and bills in simple "
-        "language. You know Pakistan's WAPDA/NEPRA tariff schedules (peak "
-        "07:00–23:00), LESCO load shedding rotation, Punjab heat seasons "
-        "(May–August, 40°C+), and Ramadan consumption shifts. Be concise, "
-        "specific, and data-driven. Answers should be 3–5 sentences unless "
-        "the user asks for detail."
-    )
-
-    def ask_assistant(question: str) -> str:
-        intent   = classify_intent(question)
-        context  = retrieve_context(question)
-        data_ctx = build_data_context(intent)
-
-        history = [
-            {"role": m["role"], "content": m["content"]}
-            for m in st.session_state.messages[-6:]
-        ]
-
-        client   = Groq(api_key=groq_key)
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                *history,
-                {
-                    "role": "user",
-                    "content": (
-                        f"{question}\n\n"
-                        f"Relevant energy records:\n{context}\n\n"
-                        f"Key stats: {data_ctx}"
-                    ),
-                },
-            ],
-            temperature=0.3,
-            max_tokens=350,
-        )
-        return response.choices[0].message.content
-
-    # ── Chat UI ───────────────────────────────────────────────────────────
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-
-    # Suggested questions
-    st.markdown("**Try asking:**")
-    suggestions = [
-        "What is my average daily consumption?",
-        "Why is my bill high in summer?",
-        "How does load shedding affect usage?",
-        "When should I avoid heavy appliances?",
-        "Were any anomalies detected?",
-    ]
-    s_cols = st.columns(len(suggestions))
-    for col, suggestion in zip(s_cols, suggestions):
-        with col:
-            if st.button(suggestion, use_container_width=True,
-                         key=f"sug_{suggestion[:15]}"):
-                st.session_state.pending = suggestion
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # Display history
-    for msg in st.session_state.messages:
-        if msg["role"] == "user":
-            st.markdown(
-                f"<div class='chat-user'><b>You:</b> {msg['content']}</div>",
-                unsafe_allow_html=True,
-            )
-        else:
-            st.markdown(
-                f"<div class='chat-bot'><b>⚡ SmartFlow:</b> {msg['content']}</div>",
-                unsafe_allow_html=True,
-            )
-
-    # Input
-    user_input = st.chat_input("Ask about your energy consumption...")
-
-    question = None
-    if user_input:
-        question = user_input
-    elif hasattr(st.session_state, "pending"):
-        question = st.session_state.pending
-        del st.session_state.pending
-
-    if question:
-        st.session_state.messages.append({"role": "user", "content": question})
-        with st.spinner("Thinking..."):
-            answer = ask_assistant(question)
-        st.session_state.messages.append({"role": "assistant", "content": answer})
-        st.rerun()
-
-    if st.session_state.messages:
-        if st.button("🗑️ Clear conversation"):
+        # ── Chat UI ───────────────────────────────────────────────────────────
+        if "messages" not in st.session_state:
             st.session_state.messages = []
+
+        # Suggested questions
+        st.markdown("**Try asking:**")
+        suggestions = [
+            "What is my average daily consumption?",
+            "Why is my bill high in summer?",
+            "How does load shedding affect usage?",
+            "When should I avoid heavy appliances?",
+            "Were any anomalies detected?",
+        ]
+        s_cols = st.columns(len(suggestions))
+        for col, suggestion in zip(s_cols, suggestions):
+            with col:
+                if st.button(suggestion, use_container_width=True,
+                            key=f"sug_{suggestion[:15]}"):
+                    st.session_state.pending = suggestion
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Display history
+        for msg in st.session_state.messages:
+            if msg["role"] == "user":
+                st.markdown(
+                    f"<div class='chat-user'><b>You:</b> {msg['content']}</div>",
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    f"<div class='chat-bot'><b>⚡ SmartFlow:</b> {msg['content']}</div>",
+                    unsafe_allow_html=True,
+                )
+
+        # Input
+        user_input = st.chat_input("Ask about your energy consumption...")
+
+        question = None
+        if user_input:
+            question = user_input
+        elif hasattr(st.session_state, "pending"):
+            question = st.session_state.pending
+            del st.session_state.pending
+
+        if question:
+            st.session_state.messages.append({"role": "user", "content": question})
+            with st.spinner("Thinking..."):
+                answer = ask_assistant(question)
+            st.session_state.messages.append({"role": "assistant", "content": answer})
             st.rerun()
+
+        if st.session_state.messages:
+            if st.button("🗑️ Clear conversation"):
+                st.session_state.messages = []
+                st.rerun()
 
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 4 — PAKISTAN CONTEXT
